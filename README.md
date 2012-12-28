@@ -42,14 +42,15 @@ mplayerを起動するまでをゴールとしてます。
 * ラジオは受信可能な放送局をプルダウンで選択し、外部コマンドを起動する。
 * WEB上に今、再生中のプレイリストの概略を表示する。
 　かならずしも再生中の曲である必要はない。
+* ロックを考慮しない。イントラネットで使う。使うのは私一人。家族が操作してもすぐわかる。認証も実装しない。
 
 
 想定環境
 -------
 
-* FreeBSD 8.2
-* Mplayer  MPlayer SVN-r34821-snapshot-4.2.1
-* ruby 1.9.x? + sinatra + HAML
+* FreeBSD 8.2（古いけど。。あまり関係ない）
+* MPlayer  MPlayer SVN-r34821-snapshot-4.2.1
+* ruby 1.9.x? + sinatra + HAML + bootstrap + jquery?..
 
 
 
