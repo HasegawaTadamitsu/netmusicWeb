@@ -2,8 +2,15 @@
 require 'sinatra'
 require 'sass'
 require 'haml'
+require './music.rb'
 
 set :port, 4777
+
+include Music
+
+configure do
+  musicの初期化
+end
 
 get '/style.css' do
   content_type 'text/css', :charset => 'utf-8'
@@ -11,7 +18,8 @@ get '/style.css' do
 end
 
 get '/' do
-  @message = "hello"
+  playing_music =  再生中のfile名
+  @message =(playing_music.nil?)?nil:"現在、'#{playing_music}'を再生中です"
   haml :index
 end
 
