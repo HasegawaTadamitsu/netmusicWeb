@@ -23,6 +23,10 @@ get '/' do
   haml :index
 end
 
+get '/musicdata.json' do
+  `cat /tmp/sample-data1.json`
+end
+
 __END__
 
 @@ style
@@ -51,7 +55,17 @@ contents
     %link{:rel=>"stylesheet", :type=>"text/css", |
     :href=>"./bootstrap/css/bootstrap.min.css"} 
     %link{:rel=>"stylesheet", :type=>"text/css", |
-    :href=>"./bootstrap/css/bootstrap-responsive.min.css"} |
+    :href=>"./bootstrap/css/bootstrap-responsive.min.css"} 
+    %link{:rel=>"stylesheet", :type=>"text/css", |
+    :href=>"./dynatree/skin-vista/ui.dynatree.css"} 
+
+    %script{:src =>'https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js' } 
+ 
+    %script{:src =>'https://ajax.googleapis.com/ajax/libs/jqueryui/1.9.2/jquery-ui.min.js'} 
+    %script{:src => './bootstrap/js/bootstrap.min.js'}
+    %script{:src => './dynatree/jquery.dynatree.min.js'}
+
+
   %body
     .container-fluid
       .hero-unit
@@ -71,16 +85,22 @@ contents
             %li hoge
         .span10
           != yield
-    %script{:src => |
-    'https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js'} |
-    %script{:src => './bootstrap/js/bootstrap.min.js'}
 
   
 @@ index
 :javascript
-  var string ='hello';
-  window.alert(string);
+  $(function() {
+    $("#music-tree").dynatree({  
+      checkbox: true,  
+      selectMode: 3,  
+      initAjax: {
+        url: "/musicdata.json"
+      }
+    });
+  });
 
 -#  body
-%ul
-  %li hoge
+.well
+  %h2 music tree
+  #music-tree
+
