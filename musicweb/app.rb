@@ -24,7 +24,8 @@ get '/' do
 end
 
 get '/musicdata.json' do
-  `cat /tmp/sample-data1.json`
+  ret = 音楽file一覧JSON
+  return ret
 end
 
 __END__
