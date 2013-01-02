@@ -28,6 +28,14 @@ get '/musicdata.json' do
   return ret
 end
 
+get '/playmp3' do
+  key = params[:key]
+  fileName = kill_and_play_mp3 key
+  p fileName
+  @message ="playing #{fileName}"
+  haml :playmp3,layout => false
+end
+
 __END__
 
 @@ style
@@ -87,16 +95,42 @@ contents
         .span10
           != yield
 
+@@ playmp3
+.alert.alert-block
+  %button{:class=>"close","data-dismiss"=>"alert"} &times;
+  %strong Message
+  =@message
   
 @@ index
 :javascript
   $(function() {
+    click_mp3 = function(a){
+      key = a.data.key
+      $.ajax({
+        url: '/playmp3',
+        data: {
+          key: key
+        },
+        timeout: 1000,
+        dataType: 'html',
+        cache: false,
+        error: function(jqXHR,textStatus,errorThrown){
+                 alert("play error.");
+               },
+        success: function(data,textStatus,jqXHR){
+                 $("#message").html(data);
+               },
+      });
+ 
+    };
+
     $("#music-tree").dynatree({  
       checkbox: true,  
       selectMode: 3,  
       initAjax: {
         url: "/musicdata.json"
-      }
+      },
+      onDblClick: click_mp3,
     });
   });
 
