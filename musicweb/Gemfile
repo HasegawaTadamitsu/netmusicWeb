@@ -3,4 +3,5 @@ gem 'sinatra'
 gem 'haml'
 gem 'shotgun'
 gem 'sass'
+gem 'rspec'
 

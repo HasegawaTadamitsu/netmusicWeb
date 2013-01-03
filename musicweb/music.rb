@@ -1,6 +1,7 @@
 # -*- coding: utf-8 --*
 require 'json'
 require 'digest/md5'
+require 'open3'
 
 class Dir
   def self.未存在なら作成する dirname
@@ -25,7 +26,6 @@ class Dir
     sorted = sorted_dir + sorted_file
     return sorted
   end
-
 end
 
 class File
@@ -74,62 +74,73 @@ class File
     ret = dirname.split "/"
     return ret
   end
-
 end
 
-#Encoding.default_internal = Encoding.default_external = "UTF-8"
+class Player
+  MPLAYER="/usr/bin/mplayer"
+  attr_writer :file
 
-module Music
-
-  BASE_MUSIC_FILE_DIR="/tmp/music"
-  NOW_PLAYING_FILE="#{BASE_MUSIC_FILE_DIR}/playing.txt"
-  MUSIC_LIBRARY_DIR="/mnt/media/minidlna/music"
-
-
-  def musicの初期化
-    Dir.未存在なら作成する  BASE_MUSIC_FILE_DIR
-    init_playing_file
-    音楽LIBRARYの読込
+  def initialize base_file_dir
+    @status_file = "#{base_file_dir}/playing_status.txt"
+    read_status @status_file
+    update_status
   end
 
-  def 音楽LIBRARYの読込
-    @@music_library_files,@@keyInfo =
-                    File.ファイル一覧( MUSIC_LIBRARY_DIR,".mp3")
+  def pid
+    update_status
+    return @pid
   end
 
-  def 音楽file一覧JSON
-    return   JSON.generate @@music_library_files
+  def file
+    update_status
+    return @file
   end
 
-
-  def init_playing_file
-    File.未存在なら作成する NOW_PLAYING_FILE
+  def play
+    kill_player @pid
+    @pid = execute_mplay_mp3 @file
+    write_status @status_file
   end
 
-  def 再生中のfile名
-    pid,key,mucis_name = playing_info
-    music_name = nil if music_name == ""
-    return music_name
+  def stop
+    kill_player @pid
+    update_status
   end
 
-  def write_playing_file pid,key,music_name
-     File.open( NOW_PLAYING_FILE,"w" ) do | file |
-      file.write "#{pid},#{key},#{music_name}"
-     end
+  def update_status
+    unless exist_player? @pid
+      @pid = 0
+      @file= ""
+      write_status @status_file
+      return true
+    end
+    return false
   end
 
-  def playing_info
-    pid,key,music_name = File.read( NOW_PLAYING_FILE ).split(/\s*,\s*/)
-    return pid,key,music_name
+private
+  def write_status status_file
+    File.open( status_file,"w" ) do | file |
+      file.write "#{@pid}\n"
+      file.write "#{@file}\n"
+    end
   end
 
-  def exist_pid_player pid
-    gstatus = Process.getpgid(pid) rescue nil
-    p gstatus
+  def read_status status_file
+    unless File.exist? status_file
+      @pid = 0
+      @file = ""
+      write_status status_file
+    end
+    File.open( status_file ) do | file |
+      pid = file.read
+      @pid = pid.to_i
+      file = file.read
+      @file = file 
+    end
   end
 
-  def kill_music_player pid
-    return if pid.nil?
+  def kill_player pid
+    return if pid.nil? or pid == 0
     begin
       i_pid = pid.to_i
     rescue TypeError
@@ -137,25 +148,69 @@ module Music
       return
     end
     begin
+      Process.detach(i_pid)
       Process.kill('KILL',i_pid)
     rescue =>e
       puts e
     end
   end
 
-  def kill_and_play_mp3 key
-    pid,a,b = playing_info
-    kill_music_player pid
-    filePath = @@keyInfo[key]
-    pid = execute_mplay_mp3 filePath
-    write_playing_file pid,key,filePath
-    return filePath
+  def execute_mplay_mp3 fileName
+    pid = fork do
+#      exec File.dirname(__FILE__)+"/player.sh","#{fileName}"
+      exec "mplayer","#{fileName}"
+    end
+    return pid
   end
 
-  def execute_mplay_mp3 path
-    pid = fork do 
-       exec "/usr/bin/mplayer", path
+  def exist_player? pid
+    return false if pid.nil? or pid == 0
+    begin
+      gstatus = Process.getpgid(pid)
+    rescue Errno::ESRCH
+      return false
     end
+    return true
+  end
+
+end
+
+class Music
+
+  BASE_MUSIC_FILE_DIR="/tmp/music"
+  NOW_PLAYING_FILE="#{BASE_MUSIC_FILE_DIR}/playing.txt"
+  MUSIC_LIBRARY_DIR="/mnt/media/minidlna/music"
+
+  def initialize
+    Dir.未存在なら作成する  BASE_MUSIC_FILE_DIR
+    File.未存在なら作成する NOW_PLAYING_FILE
+    @player = Player.new  BASE_MUSIC_FILE_DIR
+    load_library
+  end
+
+  def load_library
+    @music_library_files,@keyInfo =
+                    File.ファイル一覧( MUSIC_LIBRARY_DIR,".mp3")
+  end
+
+  def library_json
+    return JSON.generate @music_library_files
+  end
+
+  def playing_name
+    file = @player.file
+    return nil if file == ""
+    return File.basename file
+  end
+
+  def play_mp3 key
+    @player.file = @keyInfo[key]
+    @player.play
+    return  @player.file
+  end
+
+  def status
+    file = @player.file
   end
 end
 

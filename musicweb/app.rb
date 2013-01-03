@@ -6,10 +6,8 @@ require './music.rb'
 
 set :port, 4777
 
-include Music
-
 configure do
-  musicの初期化
+  @@music = Music.new
 end
 
 get '/style.css' do
@@ -18,22 +16,36 @@ get '/style.css' do
 end
 
 get '/' do
-  playing_music =  再生中のfile名
+  playing_music =  @@music.playing_name
   @message =(playing_music.nil?)?nil:"現在、'#{playing_music}'を再生中です"
   haml :index
 end
 
 get '/musicdata.json' do
-  ret = 音楽file一覧JSON
+  ret = @@music.library_json
   return ret
 end
 
 get '/playmp3' do
   key = params[:key]
-  fileName = kill_and_play_mp3 key
-  p fileName
-  @message ="playing #{fileName}"
-  haml :playmp3,layout => false
+  redirect "/" if key.nil?
+  fileName = @@music.play_mp3 key
+  if fileName.nil? or fileName == ""
+    @message = "unknown music file.please reload and refresh."
+  else 
+    @message ="playing #{fileName}"
+  end
+  haml :message_block, :layout => false
+end
+
+get '/check_status' do
+  fileName  = @@music.status
+  if fileName.nil? or fileName == ""
+    @message = "stop music...wait your input."
+  else 
+    @message = "playing..#{fileName}"
+  end
+  haml :message_block, :layout => false
 end
 
 __END__
@@ -90,12 +102,20 @@ contents
       .row-fluid
         .span2
           -#  side
-          %ul
-            %li hoge
+          .well
+            %h2 Action
+            .ul
+              .li 
+                %a{:href=>"#",:onClick=>""} stop music and reset all
+              .li 
+                %a{:href=>"#",:onClick=>""} refresh tree
+              .li 
+                %a{:href=>"#",:onClick=>"check_status()"}
+                  check now playing music
         .span10
           != yield
 
-@@ playmp3
+@@ message_block
 .alert.alert-block
   %button{:class=>"close","data-dismiss"=>"alert"} &times;
   %strong Message
@@ -111,11 +131,14 @@ contents
         data: {
           key: key
         },
-        timeout: 1000,
+        timeout: 10000,
         dataType: 'html',
         cache: false,
         error: function(jqXHR,textStatus,errorThrown){
-                 alert("play error.");
+                 console.log("XHR " + jqXHR);
+                 console.log("textStatus " + textStatus);
+                 console.log("throw " + errorThrown);
+                 alert("can not play.please retry.");
                },
         success: function(data,textStatus,jqXHR){
                  $("#message").html(data);
@@ -123,15 +146,37 @@ contents
       });
  
     };
+    check_status = function(){
+      $.ajax({
+        url: '/check_status',
+        data: {},
+        timeout: 1000,
+        dataType: 'html',
+        cache: false,
+        error: function(jqXHR,textStatus,errorThrown){
+                 console.log(jqXHR);
+                 console.log(textStatus);
+                 console.log(errorThrown);
+                 alert("can not get status.please retry.");
+               },
+        success: function(data,textStatus,jqXHR){
+                 $("#message").html(data);
+               },
+      });
+    };
 
-    $("#music-tree").dynatree({  
-      checkbox: true,  
-      selectMode: 3,  
-      initAjax: {
-        url: "/musicdata.json"
-      },
-      onDblClick: click_mp3,
-    });
+    setup_tree = function(){
+      $("#music-tree").null;
+      $("#music-tree").dynatree({  
+        checkbox: true,  
+        selectMode: 3,  
+        initAjax: {
+          url: "/musicdata.json"
+        },
+        onDblClick: click_mp3,
+      });
+    };
+  setup_tree();
   });
 
 -#  body
