@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 require 'sinatra'
+require 'sinatra/reloader'
 require 'sass'
 require 'haml'
 require './music.rb'

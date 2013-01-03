@@ -1,7 +1,8 @@
 source 'http://rubygems.org'
 gem 'sinatra'
 gem 'haml'
-gem 'shotgun'
+#gem 'shotgun'
+gem 'sinatra-reloader'
 gem 'sass'
 gem 'rspec'
 

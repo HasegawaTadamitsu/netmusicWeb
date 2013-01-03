@@ -1,5 +1,4 @@
 #!/bin/sh
 
-bundle exec shotgun app.rb
-
-#ruby  app.rb
+#bundle exec shotgun app.rb
+ruby  app.rb
