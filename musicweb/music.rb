@@ -21,8 +21,17 @@ class Dir
       unsorted_dir.push  fullpath if File.ftype(fullpath) == "directory"
       unsorted_file.push fullpath if File.ftype(fullpath) == "file"
     end
-    sorted_dir  = unsorted_dir.sort
-    sorted_file = unsorted_file.sort
+    natural_sort = Proc.new do |a, b|
+      cmp = a.gsub(/(\d+)/) {"%05d" % $1.to_i} <=>
+            b.gsub(/(\d+)/) {"%05d" % $1.to_i}
+            if cmp == 0
+              a <=> b
+            else
+              cmp
+            end
+    end
+    sorted_dir  = unsorted_dir.sort(&natural_sort)
+    sorted_file = unsorted_file.sort(&natural_sort)
     sorted = sorted_dir + sorted_file
     return sorted
   end
@@ -157,7 +166,6 @@ private
 
   def execute_mplay_mp3 fileName
     pid = fork do
-#      exec File.dirname(__FILE__)+"/player.sh","#{fileName}"
       exec "mplayer","#{fileName}"
     end
     return pid

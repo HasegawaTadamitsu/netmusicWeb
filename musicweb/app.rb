@@ -31,21 +31,17 @@ get '/playmp3' do
   key = params[:key]
   redirect "/" if key.nil?
   fileName = @@music.play_mp3 key
-  if fileName.nil? or fileName == ""
-    @message = "unknown music file.please reload and refresh."
-  else 
-    @message ="playing #{fileName}"
-  end
+  @message =(fileName.nil? or fileName == "")?
+            "unknown music file.please reload and refresh.":
+            "playing..#{fileName}"
   haml :message_block, :layout => false
 end
 
 get '/check_status' do
   fileName  = @@music.status
-  if fileName.nil? or fileName == ""
-    @message = "stop music...wait your input."
-  else 
-    @message = "playing..#{fileName}"
-  end
+  @message =(fileName.nil? or fileName == "")?
+            "stop music...wait your input.":
+            "playing..#{fileName}"
   haml :message_block, :layout => false
 end
 
@@ -107,9 +103,9 @@ contents
             %h2 Action
             .ul
               .li 
-                %a{:href=>"#",:onClick=>""} stop music and reset all
+                %a{:href=>"#",:onClick=>"stop_all()"} stop music and reset all
               .li 
-                %a{:href=>"#",:onClick=>""} refresh tree
+                %a{:href=>"#",:onClick=>"reload_tree()"} refresh tree
               .li 
                 %a{:href=>"#",:onClick=>"check_status()"}
                   check now playing music
@@ -125,6 +121,67 @@ contents
 @@ index
 :javascript
   $(function() {
+    ajax_error = function(message,jqXHR,textStatus,errorThrown){
+                 console.log(jqXHR);
+                 console.log(textStatus);
+                 console.log(errorThrown);
+                 alert(message);
+    };
+
+    stop_all = function(){
+      $.ajax({
+        url: '/stop_all',
+        data: {},
+        timeout: 1000,
+        dataType: 'html',
+        cache: false,
+        error: function(jqXHR,textStatus,errorThrown){
+                 ajax_error("can not stop music.please retry.",
+                            jqXHR,textStatus,errorThrown);
+               },
+        success: function(data,textStatus,jqXHR){
+                 $("#message").html(data);
+               },
+      });
+    };
+
+    refresh_tree = function(){
+      $.ajax({
+        url: '/refresh_tree',
+        data: {},
+        timeout: 1000,
+        dataType: 'html',
+        cache: false,
+        error: function(jqXHR,textStatus,errorThrown){
+                 console.log(jqXHR);
+                 console.log(textStatus);
+                 console.log(errorThrown);
+                 alert("can not refresh tree.please retry.");
+               },
+        success: function(data,textStatus,jqXHR){
+                 $("#message").html(data);
+               },
+      });
+    };
+
+    check_status = function(){
+      $.ajax({
+        url: '/check_status',
+        data: {},
+        timeout: 1000,
+        dataType: 'html',
+        cache: false,
+        error: function(jqXHR,textStatus,errorThrown){
+                 ajax_error("can not get status.please retry.",
+                            jqXHR,textStatus,errorThrown);
+               },
+        success: function(data,textStatus,jqXHR){
+                 $("#message").html(data);
+               },
+      });
+    };
+
+
     click_mp3 = function(a){
       key = a.data.key
       $.ajax({
@@ -136,34 +193,14 @@ contents
         dataType: 'html',
         cache: false,
         error: function(jqXHR,textStatus,errorThrown){
-                 console.log("XHR " + jqXHR);
-                 console.log("textStatus " + textStatus);
-                 console.log("throw " + errorThrown);
-                 alert("can not play.please retry.");
+                 ajax_error("can not play mp3.please retry.",
+                            jqXHR,textStatus,errorThrown);
                },
         success: function(data,textStatus,jqXHR){
                  $("#message").html(data);
                },
       });
  
-    };
-    check_status = function(){
-      $.ajax({
-        url: '/check_status',
-        data: {},
-        timeout: 1000,
-        dataType: 'html',
-        cache: false,
-        error: function(jqXHR,textStatus,errorThrown){
-                 console.log(jqXHR);
-                 console.log(textStatus);
-                 console.log(errorThrown);
-                 alert("can not get status.please retry.");
-               },
-        success: function(data,textStatus,jqXHR){
-                 $("#message").html(data);
-               },
-      });
     };
 
     setup_tree = function(){
