@@ -87,69 +87,57 @@ end
 
 class Player
   MPLAYER="/usr/bin/mplayer"
+
   attr_writer :file
 
   def initialize base_file_dir
-    @status_file = "#{base_file_dir}/playing_status.txt"
-    read_status @status_file
-    update_status
+    @lock = Mutex.new
+    @pin_1, @pout_1 = IO.pipe
+    @pin_2, @pout_2 = IO.pipe
   end
 
   def pid
-    update_status
-    return @pid
+    @lock.synchronize do
+      update_status
+      return @pid
+    end
   end
 
   def file
-    update_status
-    return @file
+    @lock.synchronize do
+      update_status
+      return @file
+    end
   end
 
   def play
-    kill_player @pid
-    @pid = execute_mplay_mp3 @file
-    write_status @status_file
+    @lock.synchronize do
+      kill_player @pid
+      @pid = execute_mplay_mp3 @file
+    end
   end
 
   def stop
-    kill_player @pid
-    update_status
+    @lock.synchronize do
+      kill_player @pid
+      update_status
+    end
   end
 
+private
   def update_status
     unless exist_player? @pid
       @pid = 0
       @file= ""
-      write_status @status_file
       return true
     end
     return false
   end
 
-private
-  def write_status status_file
-    File.open( status_file,"w" ) do | file |
-      file.write "#{@pid}\n"
-      file.write "#{@file}\n"
-    end
-  end
-
-  def read_status status_file
-    unless File.exist? status_file
-      @pid = 0
-      @file = ""
-      write_status status_file
-    end
-    File.open( status_file ) do | file |
-      pid = file.read
-      @pid = pid.to_i
-      file = file.read
-      @file = file 
-    end
-  end
-
   def kill_player pid
-    return if pid.nil? or pid == 0
+    if pid.nil? or pid == 0
+      return 
+    end
     begin
       i_pid = pid.to_i
     rescue TypeError
@@ -166,11 +154,28 @@ private
 
   def execute_mplay_mp3 fileName
     pid = fork do
+      unless_closed_close @pin_1
+      unless_closed_close @pout_2
+      unless @pin_2.closed?
+        STDIN.reopen (@pin_2)
+      end
+      unless @pout_1.closed?
+        STDOUT.reopen (@pout_1)
+      end
       exec "mplayer","#{fileName}"
+      sleep 1
     end
+    unless_closed_close @pin_2
+    unless_closed_close @pout_1
     return pid
   end
 
+  def unless_closed_close io
+    unless io.closed?
+      io.close
+    end
+  end
+  
   def exist_player? pid
     return false if pid.nil? or pid == 0
     begin
@@ -219,6 +224,10 @@ class Music
 
   def status
     file = @player.file
+  end
+
+  def stop
+    @player.stop
   end
 end
 

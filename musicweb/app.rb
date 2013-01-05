@@ -45,6 +45,11 @@ get '/check_status' do
   haml :message_block, :layout => false
 end
 
+get '/stop_all' do
+  fileName  = @@music.stop
+  @message = "stop all music"
+  haml :message_block, :layout => false
+end
 __END__
 
 @@ style
