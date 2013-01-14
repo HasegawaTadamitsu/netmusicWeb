@@ -65,6 +65,16 @@ li
 contents
   margin: 2em,2em,2em,2em
 
+#tree_control
+  position: fixed
+  top: 10px
+  right: 40px
+
+#play_control
+  position: fixed
+  bottom: 10px
+  right: 40px
+
 @@ layout
 !!! XML
 !!! Strict
@@ -108,15 +118,17 @@ contents
             %h2 Action
             .ul
               .li 
-                %a{:href=>"#",:onClick=>"stop_all()"} stop music and reset all
+                %a#lnk_stop_all{:href=>"#"} stop music and reset all
               .li 
-                %a{:href=>"#",:onClick=>"reload_tree()"} refresh tree
+                %a#lnk_refresh_tree{:href=>"#"} refresh tree
               .li 
-                %a{:href=>"#",:onClick=>"check_status()"}
-                  check now playing music
+                %a#lnk_check_status{:href=>"#"} check now playing music
         .span10
           != yield
+          #page_bottom_id
 
+
+      
 @@ message_block
 .alert.alert-block
   %button{:class=>"close","data-dismiss"=>"alert"} &times;
@@ -133,7 +145,7 @@ contents
                  alert(message);
     };
 
-    stop_all = function(){
+    $("#lnk_stop_all").click( function(){
       $.ajax({
         url: '/stop_all',
         data: {},
@@ -148,9 +160,9 @@ contents
                  $("#message").html(data);
                },
       });
-    };
+    });
 
-    refresh_tree = function(){
+    $("#lnk_refresh_tree").click( function(){
       $.ajax({
         url: '/refresh_tree',
         data: {},
@@ -167,9 +179,9 @@ contents
                  $("#message").html(data);
                },
       });
-    };
+    });
 
-    check_status = function(){
+    $("#lnk_check_status").click( function(){
       $.ajax({
         url: '/check_status',
         data: {},
@@ -184,8 +196,7 @@ contents
                  $("#message").html(data);
                },
       });
-    };
-
+    });
 
     click_mp3 = function(a){
       key = a.data.key
@@ -209,8 +220,8 @@ contents
     };
 
     setup_tree = function(){
-      $("#music-tree").null;
-      $("#music-tree").dynatree({  
+      $("#music_tree").null;
+      $("#music_tree").dynatree({  
         checkbox: true,  
         selectMode: 3,  
         initAjax: {
@@ -219,11 +230,85 @@ contents
         onDblClick: click_mp3,
       });
     };
-  setup_tree();
+    setup_tree();
+
+    $("#btn_to_top").click( function(){
+      location.href="#message";
+    });
+    $("#btn_toggle_expand_tree").click( function(){
+      var rootNode = $("#music_tree").dynatree("getRoot");
+      rootNode.visit( function(node){
+          node.toggleExpand()
+        });
+    });
+    $("#btn_expand_all_tree").click( function(){
+      var rootNode = $("#music_tree").dynatree("getRoot");
+      rootNode.visit( function(node){
+          node.expand(true)
+        });
+    });
+    $("#btn_unexpand_all_tree").click( function(){
+      var rootNode = $("#music_tree").dynatree("getRoot");
+      rootNode.visit( function(node){
+          node.expand(false)
+        });
+    });
+    $("#btn_to_bottom").click( function(){
+      location.href="#page_bottom_id";
+    });
+
+    $("#music_form").submit(function() {
+      // Serialize standard form fields:
+      var formData = $(this).serializeArray();
+      // then append Dynatree selected 'checkboxes':
+      var tree = $("#music_tree").dynatree("getTree");
+      formData = formData.concat(tree.serializeArray());
+      // and/or add the active node as 'radio button':
+      if(tree.getActiveNode()){
+        formData.push(
+         {name: "activeNode", value: tree.getActiveNode().data.key}
+        );
+      }
+      alert("POSTing this:\n" + jQuery.param(formData));
+
+      $.post("http://127.0.0.1:8001/submit_data",
+         formData,
+         function(response, textStatus, xhr){
+              alert("POST returned " + response + ", " + textStatus);
+         }
+      );
+      return false;
+    });
+
+    $("#btn_play").click( function(){
+      $(music_form).submit();
+    });
+
   });
 
 -#  body
-.well
-  %h2 music tree
-  #music-tree
+#tree_control
+  .btn-group
+    %button#btn_to_top.btn.btn-primary ↑
+    %button#btn_toggle_expand_tree.btn.btn-primary toggle
+    %button#btn_expand_all_tree.btn.btn-primary expand
+    %button#btn_unexpand_all_tree.btn.btn-primary unexpand
+    %button#btn_to_bottom.btn.btn-primary ↓
+
+
+.well.row.show-grid
+  .span10
+    %h2 music tree
+  .row
+    .span12
+      %form#music_form
+        #music_tree
+        #play_control
+          .btn-group
+            %button#btn_before.btn.btn-primary ｜＜
+            %button#btn_play.btn.btn-primary △
+            %button#btn_next_all_tree.btn.btn-primary ＞｜
+            %br
+            %input{:type=>"checkbox", :name=>"shuffle", :checked=>"checked"}shuffle
+            %input{:type=>"checkbox", :name=>"loop",:checked=>"checked"}loop
 
