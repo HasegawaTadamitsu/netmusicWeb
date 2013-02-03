@@ -90,7 +90,7 @@ class Player
 
   attr_writer :file
 
-  def initialize base_file_dir
+  def initialize
     @lock = Mutex.new
     @pin_1, @pout_1 = IO.pipe
     @pin_2, @pout_2 = IO.pipe
@@ -114,6 +114,14 @@ class Player
     @lock.synchronize do
       kill_player @pid
       @pid = execute_mplay_mp3 @file
+    end
+  end
+
+  def play_playlist playlist_file
+    @lock.synchronize do
+      kill_player @pid
+      @file=""
+      @pid = execute_mplay_mp3( "-playlist","#{playlist_file}")
     end
   end
 
@@ -152,7 +160,8 @@ private
     end
   end
 
-  def execute_mplay_mp3 fileName
+  def execute_mplay_mp3 *options
+p options
     pid = fork do
       unless_closed_close @pin_1
       unless_closed_close @pout_2
@@ -162,7 +171,8 @@ private
       unless @pout_1.closed?
         STDOUT.reopen (@pout_1)
       end
-      exec "mplayer","#{fileName}"
+
+      exec( "mplayer",*options)
       sleep 1
     end
     unless_closed_close @pin_2
@@ -188,21 +198,39 @@ private
 
 end
 
+
+class PlayList
+  def initialize arg_file_name,arg_keys2path
+    @file_name = arg_file_name
+    @keys2path = arg_keys2path
+  end
+
+  def create_play_list keys
+    File.open( @file_name,"w") do |file|
+      keys.split(/\s*,\s*/).each do |key|
+        path = @keys2path[key]
+        file.puts "#{path}\n"
+      end
+    end
+  end
+
+end
+
 class Music
 
   BASE_MUSIC_FILE_DIR="/tmp/music"
-  NOW_PLAYING_FILE="#{BASE_MUSIC_FILE_DIR}/playing.txt"
+  PLAY_LIST_FILE="#{BASE_MUSIC_FILE_DIR}/play_list.txt"
   MUSIC_LIBRARY_DIR="/mnt/media/minidlna/music"
 
   def initialize
     Dir.未存在なら作成する  BASE_MUSIC_FILE_DIR
-    File.未存在なら作成する NOW_PLAYING_FILE
-    @player = Player.new  BASE_MUSIC_FILE_DIR
+    @player = Player.new
     load_library
+    @play_list = PlayList.new PLAY_LIST_FILE,@key2path
   end
 
   def load_library
-    @music_library_files,@keyInfo =
+    @music_library_files,@key2path =
                     File.ファイル一覧( MUSIC_LIBRARY_DIR,".mp3")
   end
 
@@ -228,6 +256,11 @@ class Music
 
   def stop
     @player.stop
+  end
+
+  def plays args
+    @play_list.create_play_list args[:keys]
+    @player.play_playlist PLAY_LIST_FILE
   end
 end
 

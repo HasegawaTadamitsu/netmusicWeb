@@ -37,6 +37,20 @@ get '/playmp3' do
   haml :message_block, :layout => false
 end
 
+
+post '/plays' do
+  keys = params[:checked_key]
+  args= {
+    :keys    => keys,
+    :shuffle => checkbox_post_value_to_boolean( params[:shuffle]) ,
+    :loop    => checkbox_post_value_to_boolean( params[:loop] )
+  }
+  @@music.plays args
+  @message = "play music count #{keys.size}"
+  haml :message_block, :layout => false
+end
+
+
 get '/check_status' do
   fileName  = @@music.status
   @message =(fileName.nil? or fileName == "")?
@@ -50,6 +64,14 @@ get '/stop_all' do
   @message = "stop all music"
   haml :message_block, :layout => false
 end
+
+private 
+def checkbox_post_value_to_boolean  val
+  return false if val.nil? 
+  return true  if val == "on"
+  return false
+end
+
 __END__
 
 @@ style
@@ -258,30 +280,47 @@ contents
     });
 
     $("#music_form").submit(function() {
+      // append tree checked data
+      var tree = $("#music_tree").dynatree("getTree");
+
+      var checked_tree_data = tree.serializeArray();
+      if ( checked_tree_data.length == 0){
+        alert("checked tree ");
+        return false;
+      }
+
+      var post_tree_data = new Array();       
+      for ( var i = 0 ; i < checked_tree_data.length; i++){
+        var value =   checked_tree_data[i]['value'];
+        if (value == null)  continue;
+        post_tree_data.push(value);
+      }
+
       // Serialize standard form fields:
       var formData = $(this).serializeArray();
-      // then append Dynatree selected 'checkboxes':
-      var tree = $("#music_tree").dynatree("getTree");
-      formData = formData.concat(tree.serializeArray());
-      // and/or add the active node as 'radio button':
-      if(tree.getActiveNode()){
-        formData.push(
-         {name: "activeNode", value: tree.getActiveNode().data.key}
-        );
-      }
-      alert("POSTing this:\n" + jQuery.param(formData));
+      formData.push({'name':'checked_key','value':post_tree_data});  
 
-      $.post("http://127.0.0.1:8001/submit_data",
-         formData,
-         function(response, textStatus, xhr){
-              alert("POST returned " + response + ", " + textStatus);
-         }
-      );
+      $.ajax({
+        type: "POST",
+        url: '/plays',
+        data: formData,
+        timeout: 1000,
+        dataType: 'html',
+        cache: false,
+        error: function(jqXHR,textStatus,errorThrown){
+                 ajax_error("can not stop music.please retry.",
+                            jqXHR,textStatus,errorThrown);
+               },
+        success: function(data,textStatus,jqXHR){
+                 $("#message").html(data);
+               },
+      });
       return false;
     });
 
     $("#btn_play").click( function(){
       $(music_form).submit();
+      return false;
     });
 
   });
@@ -308,7 +347,11 @@ contents
             %button#btn_before.btn.btn-primary ｜＜
             %button#btn_play.btn.btn-primary △
             %button#btn_next_all_tree.btn.btn-primary ＞｜
-            %br
-            %input{:type=>"checkbox", :name=>"shuffle", :checked=>"checked"}shuffle
-            %input{:type=>"checkbox", :name=>"loop",:checked=>"checked"}loop
+          .btn-group
+            %label.btn.btn-primary
+              %input{:type=>"checkbox", :name=>"shuffle", :checked=>"checked"}
+              shuffle
+            %label.btn.btn-primary
+              %input{:type=>"checkbox", :name=>"loop",:checked=>"checked"}
+              loop
 
