@@ -12,12 +12,19 @@ class Player
     polling_filename
     
     loop do
-      sleep 1
+      sleep 2
       p @file
+      send_command ">"
     end
   end
 
 private
+  def send_command cmd
+    return false if @pout_2.closed?
+    @pout_2.write cmd
+    return true
+  end
+
   def polling_filename
     Thread.fork do
       loop do
