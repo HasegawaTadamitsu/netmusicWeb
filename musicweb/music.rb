@@ -43,7 +43,17 @@ class Music
 
   def plays args
     @play_list.create_play_list args[:keys]
+    @player.loop_flag    = args[:loop]
+    @player.shuffle_flag = args[:shuffle]
     @player.play_playlist PLAY_LIST_FILE
+  end
+
+  def play_next
+    return @player.next
+  end
+
+  def play_previous
+    return @player.previous
   end
 
 private

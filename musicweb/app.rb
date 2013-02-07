@@ -45,11 +45,36 @@ post '/plays' do
     :shuffle => checkbox_post_value_to_boolean( params[:shuffle]) ,
     :loop    => checkbox_post_value_to_boolean( params[:loop] )
   }
+
   @@music.plays args
-  @message = "play music count #{keys.size}"
+  fileName  = @@music.status
+  @message = "play music.now #{fileName}"
   haml :message_block, :layout => false
 end
 
+get '/play_next' do
+  ret = @@music.play_next
+  unless ret
+    @message = "stop music.play music."  
+  else 
+    fileName  = @@music.status
+    @message = "playing ..#{fileName}"
+  end
+
+  haml :message_block, :layout => false
+end
+
+get '/play_previous' do
+  ret = @@music.play_previous
+  unless ret
+    @message = "stop music.play music."  
+  else 
+    fileName  = @@music.status
+    @message = "playing ..#{fileName}"
+  end
+
+  haml :message_block, :layout => false
+end
 
 get '/check_status' do
   fileName  = @@music.status
@@ -279,13 +304,13 @@ contents
       location.href="#page_bottom_id";
     });
 
-    $("#music_form").submit(function() {
+    music_form_submit = function() {
       // append tree checked data
       var tree = $("#music_tree").dynatree("getTree");
 
       var checked_tree_data = tree.serializeArray();
       if ( checked_tree_data.length == 0){
-        alert("checked tree ");
+        alert("please checke tree.");
         return false;
       }
 
@@ -297,7 +322,7 @@ contents
       }
 
       // Serialize standard form fields:
-      var formData = $(this).serializeArray();
+      var formData = $("#music_form").serializeArray();
       formData.push({'name':'checked_key','value':post_tree_data});  
 
       $.ajax({
@@ -314,12 +339,40 @@ contents
         success: function(data,textStatus,jqXHR){
                  $("#message").html(data);
                },
+           });
+      return false;
+    };
+
+    click_play_next_or_previous = function(url){
+      $.ajax({
+        type: "GET",
+        url: url,
+        timeout: 2000,
+        dataType: 'html',
+        cache: false,
+        error: function(jqXHR,textStatus,errorThrown){
+                 ajax_error("can not play next/previous music.please retry.",
+                            jqXHR,textStatus,errorThrown);
+               },
+        success: function(data,textStatus,jqXHR){
+                 $("#message").html(data);
+               },
       });
+      return false;
+    };
+
+    $("#btn_play").click( function(){
+      music_form_submit();
       return false;
     });
 
-    $("#btn_play").click( function(){
-      $(music_form).submit();
+    $("#btn_play_next").click( function(){
+      click_play_next_or_previous('/play_next');
+      return false;
+    });
+
+    $("#btn_play_previous").click( function(){
+      click_play_next_or_previous('/play_previous');
       return false;
     });
 
@@ -344,9 +397,9 @@ contents
         #music_tree
         #play_control
           .btn-group
-            %button#btn_before.btn.btn-primary ｜＜
+            %button#btn_play_previous.btn.btn-primary ｜＜
             %button#btn_play.btn.btn-primary △
-            %button#btn_next_all_tree.btn.btn-primary ＞｜
+            %button#btn_play_next.btn.btn-primary ＞｜
           .btn-group
             %label.btn.btn-primary
               %input{:type=>"checkbox", :name=>"shuffle", :checked=>"checked"}

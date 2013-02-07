@@ -1,90 +1,128 @@
 # -*- coding: utf-8 --*
 require 'json'
 require 'open3'
-
 require './util.rb'
 
 class Player
   MPLAYER="/usr/bin/mplayer"
+  MPLAYER_DEFULT_OPTION =["-msglevel","all=0:cplayer=4"]
 
-
+  attr_accessor :shuffle_flag, :loop_flag
+  attr_reader   :pid,:file
+  
 
   def initialize
     @lock = Mutex.new
-    @pin_1, @pout_1 = IO.pipe
-    @pin_2, @pout_2 = IO.pipe
     @file = ""
     polling_filename
   end
 
-  def pid
-    @lock.synchronize do
-      update_status
-      return @pid
-    end
-  end
-
-  def file
-    @lock.synchronize do
-      update_status
-      return @file
-    end
-  end
-
   def play filename
-    @lock.synchronize do
-      kill_player @pid
-      @file = filename
-      @pid = execute_mplay_mp3 @file
+    ret = kill_and_anything  do
+      execute_mplay_mp3 filename
     end
+    return ret
   end
 
   def play_playlist playlist_file
-    @lock.synchronize do
-      kill_player @pid
-      @file=""
-      @pid = execute_mplay_mp3("-msglevel","all=0:cplayer=4",
-                               "-playlist","#{playlist_file}")
+    ret = kill_and_anything  do
+      execute_mplay_mp3("-playlist","#{playlist_file}")
     end
+    return ret
   end
 
   def stop
-    @lock.synchronize do
-      kill_player @pid
-      update_status
+    ret = kill_and_anything  do
+      nil
     end
+    return ret
+  end
+
+  def next
+    ret = lock_and_update_state do
+      send_command ">"
+    end
+    return ret 
+  end
+
+  def previous
+    ret = lock_and_update_state do
+      send_command "<"
+    end
+    return ret 
+  end
+
+  def update
+    ret = lock_and_update_state do
+      nil
+    end
+    return ret
   end
 
 private
+
+  def lock_and_update_state  &anything
+    @lock.synchronize do
+      return false unless update_status
+      return false unless anything.call()
+      return false unless update_filename
+      return true
+    end
+  end
+
+  def kill_and_anything  &anything
+    @lock.synchronize do
+      kill_player @pid
+      @pid = anything.call()
+      return false unless update_filename
+      return true
+    end
+  end
+
+  def send_command cmd
+    return false if @pid == 0 or @pout_2.nil? or @pout_2.closed?
+    @pout_2.write cmd
+    return true
+  end
+
   def polling_filename
     Thread.fork do
       loop do
         sleep 1
         @lock.synchronize do
-          update_status
-          if @pid == 0
-             @file = ""
-             break
-          end
-          data = read_stdin
-p data
-          if data =~ /^Playing /
-            @file = data
-          end
-        end
+          check_filename
+        end 
+      end # loop
+    end # thread
+  end
+
+  def update_filename
+    update_status
+    if @pid == 0
+      @file = ""
+      return false
+    end
+    30.times do
+      data = read_stdin
+      break if data.nil?
+      if data =~ /^Playing /
+        @file = data
+        return true
       end
     end
+    return false
   end
 
   def read_stdin
-    if @pid == 0 or @pin_1.closed?
-      return ""
+    if @pid == 0 or @pin_1.nil? or @pin_1.closed?
+      return nil
     end
     begin
       data = timeout 1 do
         @pin_1.gets
       end
     rescue Timeout::Error
+      return nil
     end
     return data
   end
@@ -93,13 +131,13 @@ p data
     unless exist_player? @pid
       @pid = 0
       @file= ""
-      return true
+      return false
     end
-    return false
+    return true
   end
 
   def kill_player pid
-    if pid.nil? or pid == 0
+    if pid.nil? or pid == 0 or pid == ""
       return 
     end
     begin
@@ -119,6 +157,9 @@ p data
   def execute_mplay_mp3 *options
     @pin_1, @pout_1 = IO.pipe
     @pin_2, @pout_2 = IO.pipe
+    new_options = options + MPLAYER_DEFULT_OPTION 
+    new_options.concat(["-loop","0"]) if @loop_flag
+    new_options.push "-shuffle"       if @shuffle_flag
 
     pid = fork do
       unless_closed_close @pin_1
@@ -130,7 +171,7 @@ p data
       unless @pout_1.closed?
         STDOUT.reopen (@pout_1)
       end
-      exec( "mplayer",*options)
+      exec( "mplayer",*new_options)
       sleep 1
     end
     unless_closed_close @pin_2
@@ -145,7 +186,7 @@ p data
   end
   
   def exist_player? pid
-    return false if pid.nil? or pid == 0
+    return false if pid.nil? or pid == 0 or pid == ""
     begin
       gstatus = Process.getpgid(pid)
     rescue Errno::ESRCH
