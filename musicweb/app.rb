@@ -192,7 +192,7 @@ contents
                  alert(message);
     };
 
-    $("#lnk_stop_all").click( function(){
+    var stop_all =  function(){
       $.ajax({
         url: '/stop_all',
         data: {},
@@ -207,6 +207,10 @@ contents
                  $("#message").html(data);
                },
       });
+    };
+
+    $("#lnk_stop_all").click( function(){
+      stop_all();
     });
 
     $("#lnk_refresh_tree").click( function(){
@@ -340,7 +344,7 @@ contents
                  $("#message").html(data);
                },
            });
-      return false;
+      return true;
     };
 
     click_play_next_or_previous = function(url){
@@ -361,8 +365,13 @@ contents
       return false;
     };
 
+    $("#btn_stop").click( function(){
+      stop_all();
+      return false;
+    });
+
     $("#btn_play").click( function(){
-      music_form_submit();
+      var ret = music_form_submit();
       return false;
     });
 
@@ -398,13 +407,14 @@ contents
         #play_control
           .btn-group
             %button#btn_play_previous.btn.btn-primary ｜＜
+            %button#btn_stop.btn.btn-primary □
             %button#btn_play.btn.btn-primary △
             %button#btn_play_next.btn.btn-primary ＞｜
           .btn-group
             %label.btn.btn-primary
-              %input{:type=>"checkbox", :name=>"shuffle", :checked=>"checked"}
+              %input{:type=>"checkbox", :id=>"shuffle", :name=>"shuffle", :checked=>"checked"}
               shuffle
             %label.btn.btn-primary
-              %input{:type=>"checkbox", :name=>"loop",:checked=>"checked"}
+              %input{:type=>"checkbox", :id=>"loop",:name=>"loop",:checked=>"checked"}
               loop
 

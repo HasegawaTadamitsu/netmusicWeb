@@ -52,7 +52,7 @@ class File
       f = File.basename fullPath
       next if f == ".." or f == "."
 
-      if File.extname( f ) == 拡張子
+      if File.ftype(fullPath) != "directory" and File.extname( f ) == 拡張子
         key = Digest::MD5.new.update fullPath
         info = {:isFolder=>false, :title =>f, 
                 :key => key}

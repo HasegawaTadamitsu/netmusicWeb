@@ -16,7 +16,19 @@ class Music
     @music_library_files,@key2path =
                     File.ファイル一覧( MUSIC_LIBRARY_DIR,".mp3")
     @play_list = PlayList.new PLAY_LIST_FILE,@key2path
+    polling_filename
   end
+
+  def polling_filename
+    Thread.fork do
+      loop do
+        p @player.file
+        sleep 1
+      end
+    end
+  end
+
+
 
   def library_json
     return JSON.generate @music_library_files

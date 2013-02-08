@@ -1,15 +1,16 @@
 # -*- coding: utf-8 --*
 require 'json'
 require 'open3'
+require 'timeout'
 require './util.rb'
 
+
 class Player
-  MPLAYER="/usr/bin/mplayer"
+  MPLAYER = (`uname` == "Linux")?"/usr/bin/mplayer":"/usr/local/bin/mplayer"
   MPLAYER_DEFULT_OPTION =["-msglevel","all=0:cplayer=4"]
 
   attr_accessor :shuffle_flag, :loop_flag
   attr_reader   :pid,:file
-  
 
   def initialize
     @lock = Mutex.new
@@ -64,9 +65,9 @@ private
   def lock_and_update_state  &anything
     @lock.synchronize do
       return false unless update_status
-      return false unless anything.call()
-      return false unless update_filename
-      return true
+      status =  anything.call()
+      update_filename
+      return status
     end
   end
 
@@ -90,7 +91,7 @@ private
       loop do
         sleep 1
         @lock.synchronize do
-          check_filename
+          update_filename
         end 
       end # loop
     end # thread
@@ -106,7 +107,7 @@ private
       data = read_stdin
       break if data.nil?
       if data =~ /^Playing /
-        @file = data
+        @file = data.split(" ",2)[1].chomp.chop
         return true
       end
     end
