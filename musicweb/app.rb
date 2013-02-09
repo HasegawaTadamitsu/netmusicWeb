@@ -236,7 +236,7 @@ contents
       $.ajax({
         url: '/check_status',
         data: {},
-        timeout: 1000,
+        timeout: 2000,
         dataType: 'html',
         cache: false,
         error: function(jqXHR,textStatus,errorThrown){
@@ -256,7 +256,7 @@ contents
         data: {
           key: key
         },
-        timeout: 10000,
+        timeout: 30000,
         dataType: 'html',
         cache: false,
         error: function(jqXHR,textStatus,errorThrown){
@@ -278,7 +278,7 @@ contents
         initAjax: {
           url: "/musicdata.json"
         },
-        onDblClick: click_mp3,
+        onDblClick: click_mp3
       });
     };
     setup_tree();
@@ -333,7 +333,7 @@ contents
         type: "POST",
         url: '/plays',
         data: formData,
-        timeout: 1000,
+        timeout: 3000,
         dataType: 'html',
         cache: false,
         error: function(jqXHR,textStatus,errorThrown){
@@ -351,7 +351,7 @@ contents
       $.ajax({
         type: "GET",
         url: url,
-        timeout: 2000,
+        timeout: 3000,
         dataType: 'html',
         cache: false,
         error: function(jqXHR,textStatus,errorThrown){
