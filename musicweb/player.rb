@@ -20,6 +20,8 @@ class Player
 
   def play filename
     ret = kill_and_anything  do
+      @shuffle_flag = false
+      @loop_flag = false
       execute_mplay_mp3 filename
     end
     return ret
@@ -34,9 +36,9 @@ class Player
 
   def stop
     ret = kill_and_anything  do
-      nil
+      0
     end
-    return ret
+    return true
   end
 
   def next
@@ -74,9 +76,10 @@ private
   def kill_and_anything  &anything
     @lock.synchronize do
       kill_player @pid
+      ret = update_status
+      return false if ret
       @pid = anything.call()
-      return false unless update_filename
-      return true
+      return update_filename
     end
   end
 
@@ -139,13 +142,13 @@ private
 
   def kill_player pid
     if pid.nil? or pid == 0 or pid == ""
-      return 
+      return 0
     end
     begin
       i_pid = pid.to_i
     rescue TypeError
       puts "can not convert pid #{pid}"
-      return
+      return 0
     end
     begin
       Process.detach(i_pid)
